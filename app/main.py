@@ -7,7 +7,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
 
-# Instantiate the the FastAPI class by assigning it to a variable named app.
+# Instantiate the FastAPI class by assigning it to a variable named app.
 app = FastAPI()
 
 # This class extends the BaseModel class from Pydantic and is used to define table columns for a DB.
@@ -18,10 +18,11 @@ class Post(BaseModel):
     rating: Optional[int] = None
 
 # This all always runs the while loop until it breaks. (True 'acts' as condition that is always true).
-# The module psycopg2 always acts as a PostgreSQL adapter for the python programming language. 
+# The module psycopg2 always acts as a PostgreSQL adapter for the python programming language.
 
 while True:
     try:
+        # Establishes a connection with the database
         conn = psycopg2.connect(host='localhost', database='fastapi',
                                 user='postgres', password='Sammy58!',
                                 cursor_factory=RealDictCursor)
@@ -37,7 +38,7 @@ while True:
 my_posts = [{"title": "title of post 1", "content": "content of post 1" , "id": 1},
             {"title": "favourite foods", "content": "I like fries", "id": 2}]
 
-# Functions for manipulating the list.
+# Functions for manipulating the in memory list implementation.
 def find_post(id):
     for p in my_posts:
         if p["id"] == id:
@@ -48,7 +49,10 @@ def find_index_post(id):
         if p['id'] == id:
             return i
 
-# API route functions (Edit this when correct terminology is confirmed.)
+# Path operation decorators with functions that are usually async.
+# '@something' in this case @app is a decorator for the app object.
+# It tells the object to use the function defined right below it which can be async functions.
+
 @app.get("/")
 def root():
     return {"message": "Welcome to my API"}
