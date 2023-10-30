@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response, status, HTTPException
+from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
 from pydantic import BaseModel
 from typing import Optional
@@ -6,9 +6,22 @@ from random import randrange
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
+from sqlalchemy.orm import Session
+from . import models
+from .database import engine, SessionLocal
+
+models.Base.metadata.create_all(bind=engine)
 
 # Instantiate the FastAPI class by assigning it to a variable named app.
 app = FastAPI()
+
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # This class extends the BaseModel class from Pydantic and is used to define table columns for a DB.
 class Post(BaseModel):
@@ -18,7 +31,7 @@ class Post(BaseModel):
     rating: Optional[int] = None
 
 # This all always runs the while loop until it breaks. (True 'acts' as condition that is always true).
-# The module psycopg2 always acts as a PostgreSQL adapter for the python programming language.
+# The module/class psycopg2 always acts as a PostgreSQL adapter for the python programming language.
 
 while True:
     try:
@@ -29,25 +42,12 @@ while True:
         cursor = conn.cursor()
         print("Database connection was successful!")
         break
+
     except Exception as error:
         print("Connection to database failed")
         print("Error: ", error)
         time.sleep(2)
 
-# This is an in memory implementation of FastAPI using a list.
-my_posts = [{"title": "title of post 1", "content": "content of post 1" , "id": 1},
-            {"title": "favourite foods", "content": "I like fries", "id": 2}]
-
-# Functions for manipulating the in memory list implementation.
-def find_post(id):
-    for p in my_posts:
-        if p["id"] == id:
-            return p
-        
-def find_index_post(id):
-    for i, p in enumerate(my_posts):
-        if p['id'] == id:
-            return i
 
 # Path operation decorators with functions that are usually async.
 # '@something' in this case @app is a decorator for the app object.
@@ -57,6 +57,10 @@ def find_index_post(id):
 def root():
     return {"message": "Welcome to my API"}
 
+@app.get("/sqlalchemy")
+def test_posts(db: Session = Depends(get_db)):
+    return {"status": "success"}
+ 
 @app.get("/posts")
 def get_posts():
     cursor.execute("""SELECT * FROM posts""")
@@ -105,4 +109,4 @@ def update_post(id: int, post: Post):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"post with id: {id} does not exist")
     
-    return{'message': update_post}
+    return{'message': updated_post}
