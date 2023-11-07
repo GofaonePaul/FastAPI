@@ -48,7 +48,6 @@ while True:
         print("Error: ", error)
         time.sleep(2)
 
-
 # Path operation decorators with functions that are usually async.
 # '@something' in this case @app is a decorator for the app object.
 # It tells the object to use the function defined right below it which can be async functions.
