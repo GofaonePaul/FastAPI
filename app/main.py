@@ -7,27 +7,19 @@ from psycopg2.extras import RealDictCursor
 import time
 from sqlalchemy.orm import Session
 from . import models
-from .database import engine, SessionLocal
+from .database import engine, get_db
+
 
 models.Base.metadata.create_all(bind=engine)
 
 # Instantiate the FastAPI class by assigning it to a variable named app.
 app = FastAPI()
 
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 # This class extends the BaseModel class from Pydantic and is used to define table columns for a DB.
 class Post(BaseModel):
     title: str
     content: str
     published: bool = True
-    rating: Optional[int] = None
 
 # This all always runs the while loop until it breaks. (True 'acts' as condition that is always true).
 # The module/class psycopg2 always acts as a PostgreSQL adapter for the python programming language.
@@ -57,27 +49,36 @@ def root():
 
 @app.get("/sqlalchemy")
 def test_posts(db: Session = Depends(get_db)):
-    return {"status": "success"}
+    posts = db.query(models.Post).all()
+    print(posts)
+    return {"data": "successful"}
  
 @app.get("/posts")
-def get_posts():
-    cursor.execute("""SELECT * FROM posts""")
-    posts = cursor.fetchall()
-    print(posts)
+def get_posts(db: Session = Depends(get_db)):
+    #cursor.execute("""SELECT * FROM posts""")
+    #posts = cursor.fetchall()
+    posts = db.query(models.Post).all()
     return {"data": posts}
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
-def create_post(post: Post):
-    cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *""",
-                   (post.title, post.content, post.published))
-    new_post = cursor.fetchone()
-    conn.commit()
+def create_post(post: Post, db: Session = Depends(get_db)):
+    # cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *""",
+    #                (post.title, post.content, post.published))
+    # new_post = cursor.fetchone()
+    # conn.commit()
+    new_post = models.Post(**post.model_dump())
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
+
     return {"data": new_post}
 
 @app.get("/posts/{id}")
-def get_post(id: int, response: Response):
-    cursor.execute("""SELECT * FROM posts WHERE id = %s """, (str(id)))
-    selected_post = cursor.fetchone()
+def get_post(id: int, response: Response, db: Session = Depends(get_db)):
+    # cursor.execute("""SELECT * FROM posts WHERE id = %s """, (str(id)))
+    # selected_post = cursor.fetchone()
+    selected_post = db.query(models.Post).filter(models.Post.id == id).first()
+
     if not selected_post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"post with id: {id} was not found")
